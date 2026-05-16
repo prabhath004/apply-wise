@@ -25,7 +25,18 @@ export async function syncJobFromActiveTab(): Promise<JobInput> {
   try {
     response = await chrome.tabs.sendMessage(tab.id, { type: "APPLYINTEL_EXTRACT_JOB" });
   } catch {
-    throw new Error("Open or refresh a LinkedIn job page, then sync again.");
+    if (!chrome.scripting?.executeScript) {
+      throw new Error("Open or refresh a LinkedIn job page, then sync again.");
+    }
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["assets/linkedinExtractor.js"]
+      });
+      response = await chrome.tabs.sendMessage(tab.id, { type: "APPLYINTEL_EXTRACT_JOB" });
+    } catch {
+      throw new Error("Open a LinkedIn job page, then sync again.");
+    }
   }
 
   if (!isJobInput(response?.job)) {

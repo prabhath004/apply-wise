@@ -3,7 +3,7 @@
   "name": "ApplyIntel",
   "description": "Analyze job fit locally, research public company signals, and generate focused outreach.",
   "version": "0.1.0",
-  "permissions": ["storage", "activeTab", "sidePanel"],
+  "permissions": ["storage", "activeTab", "sidePanel", "scripting"],
   "host_permissions": ["http://localhost:8000/*", "https://www.linkedin.com/jobs/*"],
   "background": {
     "service_worker": "assets/serviceWorker.js",

@@ -41,7 +41,7 @@ export function JobSummaryCard({ job, onChange, onSync, syncStatus, syncError }:
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-muted">Captured from the active job page.</p>
+            <p className="mt-1 text-xs text-muted">Active job page</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button
@@ -71,9 +71,7 @@ export function JobSummaryCard({ job, onChange, onSync, syncStatus, syncError }:
         <div className="p-4">
           <div className="rounded-lg border border-dashed border-border bg-surface p-4">
             <p className="text-sm font-medium text-ink">No active job captured</p>
-            <p className="mt-1 text-xs leading-5 text-muted">
-              Open a LinkedIn job page and sync the active tab. The snapshot will fill itself from the page.
-            </p>
+            <p className="mt-1 text-xs leading-5 text-muted">Waiting for a LinkedIn job page.</p>
           </div>
         </div>
       ) : (
