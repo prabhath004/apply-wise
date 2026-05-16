@@ -39,8 +39,10 @@ export function CompanyCard({ company }: CompanyCardProps) {
         {company.email_pattern && company.email_domain && (
           <p>
             Email pattern evidence: {company.email_pattern}@{company.email_domain}
+            {company.email_pattern_confidence ? ` (${company.email_pattern_confidence}% confidence)` : ""}
           </p>
         )}
+        {company.email_pattern_reason && <p>{company.email_pattern_reason}</p>}
         {company.notes.map((note) => (
           <p key={note}>{note}</p>
         ))}

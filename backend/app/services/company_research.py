@@ -1,3 +1,4 @@
+import asyncio
 import re
 from urllib.parse import quote_plus, urljoin
 
@@ -5,7 +6,8 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.schemas.company import CompanyInfo, SourceLink
-from app.services.email_patterns import dominant_pattern, extract_public_emails
+from app.services.email_patterns import dominant_pattern_evidence, extract_public_emails
+from app.services.public_search import public_search_url, search_public_web
 from app.utils.urls import domain_from_url
 
 
@@ -119,7 +121,7 @@ def _recruiter_search_urls(company_name: str) -> list[SourceLink]:
         f'"{company_name}" "talent acquisition" recruiter',
     ]
     return [
-        SourceLink(title=f"Public recruiter search {index}", url=f"https://www.google.com/search?q={quote_plus(query)}")
+        SourceLink(title=f"Public recruiter search {index}", url=public_search_url(query))
         for index, query in enumerate(queries, start=1)
     ]
 
@@ -179,6 +181,72 @@ async def _fetch_extra_pages(home_url: str, home_html: str) -> tuple[list[Source
     return sources, texts, html_pages
 
 
+def _same_domain_or_subdomain(url: str, domain: str) -> bool:
+    result_domain = domain_from_url(url)
+    return bool(result_domain and (result_domain == domain or result_domain.endswith(f".{domain}")))
+
+
+async def _fetch_email_text(client: httpx.AsyncClient, url: str) -> str | None:
+    try:
+        response = await client.get(url)
+        response.raise_for_status()
+    except httpx.HTTPError:
+        return None
+    content_type = response.headers.get("content-type", "").lower()
+    if "text/html" in content_type:
+        return response.text
+    if "text/plain" in content_type or "application/pdf" in content_type:
+        return response.content.decode("latin-1", errors="ignore")
+    return None
+
+
+async def _public_email_search(company_name: str, email_domain: str) -> list[str]:
+    queries = [
+        f'site:{email_domain} "@{email_domain}"',
+        f'filetype:pdf "@{email_domain}"',
+        f'"@{email_domain}" "{company_name}"',
+    ]
+    emails: list[str] = []
+    async with httpx.AsyncClient(
+        timeout=8,
+        follow_redirects=True,
+        headers={"User-Agent": "ApplyIntel local research bot"},
+    ) as client:
+        result_sets = await asyncio.gather(
+            *(search_public_web(query, max_results=5, client=client) for query in queries),
+            return_exceptions=True,
+        )
+        results = [
+            result
+            for result_set in result_sets
+            if not isinstance(result_set, Exception)
+            for result in result_set
+        ]
+
+        for result in results:
+            emails.extend(extract_public_emails(f"{result.title} {result.snippet}", email_domain))
+
+        fetchable_urls: list[str] = []
+        for result in results:
+            if not _same_domain_or_subdomain(result.url, email_domain):
+                continue
+            if result.url in fetchable_urls:
+                continue
+            fetchable_urls.append(result.url)
+            if len(fetchable_urls) >= 5:
+                break
+
+        page_texts = await asyncio.gather(
+            *(_fetch_email_text(client, url) for url in fetchable_urls),
+            return_exceptions=True,
+        )
+        for text in page_texts:
+            if isinstance(text, str):
+                emails.extend(extract_public_emails(text, email_domain))
+
+    return sorted(set(emails))
+
+
 async def research_company(company_name: str, job_url: str | None = None) -> CompanyInfo:
     h1b_data_url = _h1b_url(company_name)
     h1b_summary = await _h1b_summary(company_name)
@@ -208,7 +276,9 @@ async def research_company(company_name: str, job_url: str | None = None) -> Com
     for html in html_pages:
         emails.extend(extract_public_emails(html, email_domain))
     emails = sorted(set(emails))
-    email_pattern, _confidence = dominant_pattern(emails)
+    public_search_emails = await _public_email_search(company_name, email_domain) if email_domain else []
+    emails = sorted(set([*emails, *public_search_emails]))
+    pattern_evidence = dominant_pattern_evidence(emails)
 
     sources = [SourceLink(title="Company website", url=website), *extra_sources, SourceLink(title="H1BData employer search", url=h1b_data_url)]
     notes = ["Recruiter search links are public-search leads; verify identity before outreach."]
@@ -221,8 +291,10 @@ async def research_company(company_name: str, job_url: str | None = None) -> Com
         website=website,
         careers_url=careers_url,
         public_emails=emails[:10],
-        email_pattern=email_pattern,
+        email_pattern=pattern_evidence.pattern,
         email_domain=email_domain,
+        email_pattern_confidence=pattern_evidence.confidence,
+        email_pattern_reason=pattern_evidence.reason,
         h1b_data_url=h1b_data_url,
         h1b_summary=h1b_summary,
         recruiter_search_urls=recruiter_search_urls,

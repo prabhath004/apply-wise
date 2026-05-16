@@ -101,7 +101,8 @@ function extractLinkedInJobInPage(): JobInput | null {
 
   function cleanContactName(value: string): string {
     return clean(value)
-      .replace(/\s+·\s+\d+(st|nd|rd|th)?$/i, "")
+      .replace(/\s+[·•]\s+\d+(st|nd|rd|th)?$/i, "")
+      .replace(/\s+\d+(st|nd|rd|th)?$/i, "")
       .replace(/\s+View profile.*$/i, "")
       .trim();
   }
@@ -115,6 +116,22 @@ function extractLinkedInJobInPage(): JobInput | null {
 
   function isRecruitingTitle(value: string): boolean {
     return /recruit|talent acquisition|sourcer|hiring manager|engineering manager|job poster|people partner/i.test(value);
+  }
+
+  function contactNameNear(lines: string[], index: number): string | null {
+    for (let offset = 1; offset <= 4; offset += 1) {
+      const name = cleanContactName(lines[index - offset] ?? "");
+      if (isLikelyName(name)) return name;
+    }
+    return null;
+  }
+
+  function titleNear(lines: string[], index: number): string {
+    const candidates = [lines[index], lines[index - 1], lines[index + 1]].map((line) => clean(line ?? ""));
+    return (
+      candidates.find((candidate) => candidate && isRecruitingTitle(candidate) && !isLikelyName(candidate)) ??
+      "Recruiting contact"
+    );
   }
 
   function profileUrlForName(name: string): string | null {
@@ -138,14 +155,12 @@ function extractLinkedInJobInPage(): JobInput | null {
       const line = lines[index];
       if (!isRecruitingTitle(line)) continue;
 
-      const title = /job poster/i.test(line) ? lines[index - 1] ?? line : line;
-      const nameCandidate = /job poster/i.test(line) ? lines[index - 2] ?? "" : lines[index - 1] ?? "";
-      const name = cleanContactName(nameCandidate);
-      if (!isLikelyName(name) || seen.has(name.toLowerCase())) continue;
+      const name = contactNameNear(lines, index);
+      if (!name || seen.has(name.toLowerCase())) continue;
 
       contacts.push({
         name,
-        title,
+        title: titleNear(lines, index),
         profile_url: profileUrlForName(name),
         email: null,
         email_type: null,

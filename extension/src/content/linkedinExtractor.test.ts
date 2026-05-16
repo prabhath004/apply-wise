@@ -26,4 +26,34 @@ describe("extractLinkedInJob", () => {
     expect(job?.company_name).toBe("Example Co");
     expect(job?.job_description).toContain("Python");
   });
+
+  it("extracts visible LinkedIn hiring team contacts", () => {
+    const doc = new DOMParser().parseFromString(
+      `
+      <main>
+        <h1>DevOps Engineer</h1>
+        <a href="/company/mondee">Mondee</a>
+        <div class="jobs-description__content">Build infrastructure systems.</div>
+        <a href="/in/vikaskumar-jha">Vikaskumar Jha</a>
+      </main>
+      `,
+      "text/html"
+    );
+    Object.defineProperty(doc.body, "innerText", {
+      value: [
+        "Meet the hiring team",
+        "Vikaskumar Jha 3rd",
+        "Senior Manager Talent Acquisition @ Mondee",
+        "Job poster"
+      ].join("\n"),
+      configurable: true
+    });
+
+    const job = extractLinkedInJob(doc);
+
+    expect(job?.page_contacts?.[0]).toMatchObject({
+      name: "Vikaskumar Jha",
+      title: "Senior Manager Talent Acquisition @ Mondee"
+    });
+  });
 });

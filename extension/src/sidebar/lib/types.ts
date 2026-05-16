@@ -68,6 +68,8 @@ export type CompanyInfo = {
   public_emails: string[];
   email_pattern?: string | null;
   email_domain?: string | null;
+  email_pattern_confidence: number;
+  email_pattern_reason?: string | null;
   h1b_data_url?: string | null;
   h1b_summary?: string | null;
   recruiter_search_urls: SourceLink[];

@@ -1,4 +1,10 @@
-from app.services.email_patterns import dominant_pattern, extract_public_emails, generate_email_from_pattern, infer_pattern
+from app.services.email_patterns import (
+    dominant_pattern,
+    dominant_pattern_evidence,
+    extract_public_emails,
+    generate_email_from_pattern,
+    infer_pattern,
+)
 
 
 def test_email_pattern_inference() -> None:
@@ -13,4 +19,17 @@ def test_public_email_extraction_and_dominant_pattern() -> None:
 
     assert emails == ["jane.doe@example.com", "sam.lee@example.com"]
     assert pattern == "first.last"
-    assert confidence == 70
+    assert confidence == 75
+
+
+def test_dominant_pattern_evidence_ignores_generic_emails() -> None:
+    emails = extract_public_emails(
+        "Email info@example.com, jane.doe@example.com, sam.lee@example.com, alex.kim@example.com.",
+        "example.com",
+    )
+    evidence = dominant_pattern_evidence(emails)
+
+    assert "info@example.com" not in emails
+    assert evidence.pattern == "first.last"
+    assert evidence.confidence == 85
+    assert evidence.count == 3
