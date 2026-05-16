@@ -57,6 +57,16 @@ async function storeExtractedJob() {
 }
 
 if (typeof chrome !== "undefined" && chrome.storage?.local) {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type !== "APPLYINTEL_EXTRACT_JOB") return false;
+    const job = extractLinkedInJob();
+    if (job) {
+      void chrome.storage.local.set({ "applyintel.currentJob": job });
+    }
+    sendResponse({ job });
+    return false;
+  });
+
   void storeExtractedJob();
 
   let lastUrl = window.location.href;
