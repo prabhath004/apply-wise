@@ -7,7 +7,7 @@ type ContactCardProps = {
 
 export function ContactCard({ contact }: ContactCardProps) {
   return (
-    <article className="rounded-lg border border-border bg-white p-3">
+    <article className="rounded-lg border border-border bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">{contact.name}</h3>

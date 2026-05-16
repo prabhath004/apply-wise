@@ -16,7 +16,7 @@ export function OutreachPanel({ outreach, status, onGenerate }: OutreachPanelPro
   }
 
   return (
-    <section className="rounded-lg border border-border bg-white p-4">
+    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">Outreach</h2>
         <select
@@ -30,7 +30,7 @@ export function OutreachPanel({ outreach, status, onGenerate }: OutreachPanelPro
         </select>
       </div>
       <button
-        className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+        className="mt-3 w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
         type="button"
         disabled={status === "loading"}
         onClick={() => onGenerate("concise")}

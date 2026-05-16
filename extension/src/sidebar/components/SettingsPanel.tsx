@@ -14,7 +14,7 @@ export function SettingsPanel({ settings, onChange, onSave }: SettingsPanelProps
   }
 
   return (
-    <section className="rounded-lg border border-border bg-white p-4">
+    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
       <h2 className="text-sm font-semibold">Settings</h2>
       <div className="mt-3 space-y-3">
         <label className="block text-xs font-medium text-muted">

@@ -16,7 +16,16 @@ describe("JobSummaryCard", () => {
     };
     const onChange = vi.fn();
 
-    render(<JobSummaryCard job={job} onChange={onChange} />);
+    render(
+      <JobSummaryCard
+        job={job}
+        onChange={onChange}
+        onSync={vi.fn()}
+        syncStatus="idle"
+        syncError={null}
+      />
+    );
+    fireEvent.click(screen.getByLabelText("Edit fallback fields"));
     fireEvent.change(screen.getByLabelText("Job title"), { target: { value: "Backend Engineer" } });
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ job_title: "Backend Engineer" }));

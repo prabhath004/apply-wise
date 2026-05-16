@@ -6,16 +6,27 @@ type ScoreCardProps = {
 
 export function ScoreCard({ score }: ScoreCardProps) {
   const items = Object.entries(score.breakdown);
+  const ringStyle = {
+    background: `conic-gradient(#2251d1 ${score.overall * 3.6}deg, #e8edf5 0deg)`
+  };
+
   return (
-    <section className="rounded-lg border border-border bg-white p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
           <h2 className="text-sm font-semibold">Fit Score</h2>
-          <p className="mt-1 text-xs text-muted">{score.recommendation}</p>
+          <p className="mt-1 text-xs leading-5 text-muted">Holistic resume-to-role evaluation</p>
+          <span className="mt-3 inline-flex rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-primary">
+            {score.recommendation}
+          </span>
         </div>
-        <div className="text-right">
-          <div className="text-3xl font-semibold text-primary">{score.overall}</div>
-          <div className="text-xs text-muted">out of 100</div>
+        <div className="grid h-24 w-24 shrink-0 place-items-center rounded-full p-2" style={ringStyle}>
+          <div className="grid h-full w-full place-items-center rounded-full bg-white">
+            <div className="text-center">
+              <div className="text-2xl font-semibold text-ink">{score.overall}</div>
+              <div className="text-[11px] text-muted">/ 100</div>
+            </div>
+          </div>
         </div>
       </div>
       <div className="mt-4 space-y-2">

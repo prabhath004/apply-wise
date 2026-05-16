@@ -6,8 +6,13 @@ type CompanyCardProps = {
 
 export function CompanyCard({ company }: CompanyCardProps) {
   return (
-    <section className="rounded-lg border border-border bg-white p-4">
-      <h2 className="text-sm font-semibold">Company Intelligence</h2>
+    <section className="rounded-lg border border-border bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">Company Intelligence</h2>
+        <span className="rounded-full border border-border bg-surface px-2 py-1 text-xs text-muted">
+          Public sources
+        </span>
+      </div>
       <p className="mt-2 text-sm text-ink">
         {company.summary ?? "No public company summary was available from the captured job URL."}
       </p>
