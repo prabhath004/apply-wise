@@ -1,20 +1,27 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.repositories import AnalysisRepository, json_load
+from app.db.repositories import AnalysisRepository, ResumeRepository, json_load
 from app.db.session import get_db
 from app.schemas.analysis import FitScore
 from app.schemas.company import CompanyInfo
 from app.schemas.contacts import ContactInfo
 from app.schemas.outreach import OutreachGenerateRequest, OutreachResponse
-from app.services.outreach import generate_local_outreach
+from app.services.llm_client import LLMClient
+from app.services.outreach import generate_openai_outreach
 
 
 router = APIRouter(prefix="/outreach", tags=["outreach"])
 
 
 @router.post("/generate", response_model=OutreachResponse)
-def generate_outreach(payload: OutreachGenerateRequest, db: Session = Depends(get_db)) -> OutreachResponse:
+async def generate_outreach(
+    payload: OutreachGenerateRequest,
+    db: Session = Depends(get_db),
+    openai_api_key: Annotated[str | None, Header(alias="X-OpenAI-API-Key")] = None,
+) -> OutreachResponse:
     repo = AnalysisRepository(db)
     analysis = repo.get_analysis(payload.analysis_id)
     if not analysis:
@@ -48,10 +55,16 @@ def generate_outreach(payload: OutreachGenerateRequest, db: Session = Depends(ge
     job = analysis.job if hasattr(analysis, "job") else None
     job_title = job.job_title if job else "the open"
     company_name = company.name
+    job_description = job.job_description if job else ""
+    resume = ResumeRepository(db).get(analysis.resume_id)
+    resume_text = resume.raw_text if resume else ""
 
-    subject, body = generate_local_outreach(
+    subject, body = await generate_openai_outreach(
+        llm_client=LLMClient(openai_api_key),
+        resume_text=resume_text,
         job_title=job_title,
         company_name=company_name,
+        job_description=job_description,
         fit_score=fit_score,
         company=company,
         contact=contact,

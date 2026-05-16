@@ -27,13 +27,11 @@ def create_app() -> FastAPI:
     app.include_router(analysis.router)
     app.include_router(outreach.router)
 
+    init_db()
+
     @app.exception_handler(AppError)
     def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content={"error": exc.code, "message": exc.message})
-
-    @app.on_event("startup")
-    def on_startup() -> None:
-        init_db()
 
     return app
 

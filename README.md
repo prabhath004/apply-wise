@@ -10,7 +10,8 @@ The project follows the PRD in `job_intelligence_extension_technical_prd.md`.
 - Uploads and parses PDF or TXT resumes.
 - Captures LinkedIn job details with a defensive content script.
 - Provides manual job input when page extraction is incomplete.
-- Scores job fit with deterministic local logic in the current foundation.
+- Scores job fit with OpenAI using resume text, parsed job signals, seniority, responsibilities, education, domain, and risk factors.
+- Generates outreach messages with OpenAI from the resume, job, fit analysis, company context, and selected contact.
 - Stores resume, job, analysis, contacts, and outreach records in SQLite.
 - Keeps the OpenAI API key in Chrome local storage by default.
 
@@ -76,7 +77,7 @@ pnpm dev
 1. Start the backend on `http://localhost:8000`.
 2. Build and load the extension from `extension/dist`.
 3. Open the extension settings and confirm the backend URL.
-4. Add an OpenAI API key if you want LLM-backed features as they are added.
+4. Add an OpenAI API key. Job analysis and outreach generation require it.
 5. Upload a PDF or TXT resume from the sidebar.
 6. Open a LinkedIn job page or paste job details manually.
 7. Click Analyze Job.
@@ -102,7 +103,7 @@ pnpm test
 
 - Company intelligence is intentionally conservative and only summarizes from a directly available company URL.
 - Contact discovery currently returns no contacts unless a future public-source provider is added.
-- Resume parsing starts with local heuristics; richer LLM parsing is scaffolded but not yet wired into the upload route.
+- Resume parsing starts with local heuristics; OpenAI uses the extracted raw resume text during scoring and outreach.
 - The extension targets Chrome and Chromium only.
 
 ## Contribution Guidelines

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.repositories import AnalysisRepository, ResumeRepository, json_load
@@ -9,14 +11,19 @@ from app.schemas.resume import ParsedResumeProfile
 from app.services.company_research import research_company
 from app.services.contact_discovery import discover_contacts
 from app.services.job_parser import parse_job
-from app.services.scoring import score_fit
+from app.services.llm_client import LLMClient
+from app.services.scoring import score_fit, score_fit_with_openai
 
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 
 @router.post("/job", response_model=AnalyzeJobResponse)
-async def analyze_job(payload: AnalyzeJobRequest, db: Session = Depends(get_db)) -> AnalyzeJobResponse:
+async def analyze_job(
+    payload: AnalyzeJobRequest,
+    db: Session = Depends(get_db),
+    openai_api_key: Annotated[str | None, Header(alias="X-OpenAI-API-Key")] = None,
+) -> AnalyzeJobResponse:
     resume = ResumeRepository(db).get(payload.resume_id)
     if not resume:
         raise HTTPException(
@@ -26,7 +33,15 @@ async def analyze_job(payload: AnalyzeJobRequest, db: Session = Depends(get_db))
 
     parsed_resume = ParsedResumeProfile.model_validate(json_load(resume.parsed_json, {}))
     parsed_job = parse_job(payload.job.job_title, payload.job.job_description)
-    fit_score = score_fit(parsed_resume, parsed_job)
+    local_score = score_fit(parsed_resume, parsed_job)
+    fit_score = await score_fit_with_openai(
+        llm_client=LLMClient(openai_api_key),
+        resume_text=resume.raw_text,
+        parsed_resume=parsed_resume,
+        job_input=payload.job,
+        parsed_job=parsed_job,
+        local_score=local_score,
+    )
     company = await research_company(payload.job.company_name, payload.job.job_url)
     contacts = await discover_contacts(company)
 

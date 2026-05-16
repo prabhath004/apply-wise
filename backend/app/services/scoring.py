@@ -1,7 +1,25 @@
+import json
+from typing import Protocol
+
+from pydantic import ValidationError
+
+from app.core.errors import AppError
 from app.schemas.analysis import FitScore, ScoreBreakdown
+from app.schemas.job import JobInput
 from app.schemas.job import ParsedJob
 from app.schemas.resume import ParsedResumeProfile
 from app.utils.text import canonical_skill, flatten_skill_groups
+
+
+class JsonCompletionClient(Protocol):
+    async def json_completion(self, system_prompt: str, user_prompt: str) -> dict:
+        pass
+
+
+def _truncate(value: str, limit: int = 12000) -> str:
+    if len(value) <= limit:
+        return value
+    return value[:limit] + "\n[Truncated for model context]"
 
 
 def recommendation_for_score(score: int) -> str:
@@ -84,3 +102,81 @@ def score_fit(resume: ParsedResumeProfile, job: ParsedJob) -> FitScore:
         strengths=strengths,
         risks=risks,
     )
+
+
+async def score_fit_with_openai(
+    llm_client: JsonCompletionClient,
+    resume_text: str,
+    parsed_resume: ParsedResumeProfile,
+    job_input: JobInput,
+    parsed_job: ParsedJob,
+    local_score: FitScore,
+) -> FitScore:
+    system_prompt = """
+You are a careful job-fit evaluator for an early-career technical job seeker.
+Return only valid JSON. Do not include markdown.
+
+You must evaluate holistic fit, not keyword overlap alone. Consider:
+- required and preferred skills
+- responsibilities and likely day-to-day work
+- relevant experience, internships, projects, and transferable evidence
+- seniority and years of experience expectations
+- education signals
+- domain alignment
+- visa, citizenship, sponsorship, or clearance risks if present in the job text
+
+Rules:
+- Do not claim the candidate will get the job.
+- Do not invent resume facts, company facts, or missing evidence.
+- If evidence is weak, say so clearly in risks.
+- Use recommendation thresholds exactly:
+  85-100 Strong Apply
+  70-84 Apply
+  55-69 Maybe
+  0-54 Low Fit
+- Scores must be integers from 0 to 100.
+- The breakdown must contain skills, experience, seniority, domain, and education.
+- matching_skills and missing_skills should be concise arrays of strings.
+- strengths and risks should be specific, evidence-based sentences.
+""".strip()
+
+    user_prompt = json.dumps(
+        {
+            "expected_json_shape": {
+                "overall": 82,
+                "recommendation": "Apply",
+                "breakdown": {
+                    "skills": 80,
+                    "experience": 75,
+                    "seniority": 85,
+                    "domain": 70,
+                    "education": 80,
+                },
+                "matching_skills": ["Python"],
+                "missing_skills": ["Kubernetes"],
+                "strengths": ["Specific evidence-backed strength."],
+                "risks": ["Specific evidence-backed risk."],
+            },
+            "local_keyword_score_for_reference": local_score.model_dump(),
+            "parsed_resume_for_reference": parsed_resume.model_dump(),
+            "parsed_job_for_reference": parsed_job.model_dump(),
+            "job": job_input.model_dump(),
+            "resume_text": _truncate(resume_text),
+        },
+        ensure_ascii=True,
+    )
+
+    raw = await llm_client.json_completion(system_prompt, user_prompt)
+    try:
+        score = FitScore.model_validate(raw)
+    except ValidationError as exc:
+        raise AppError(
+            "invalid_fit_score_response",
+            "OpenAI returned a fit score that did not match the expected schema.",
+            status_code=502,
+        ) from exc
+
+    expected_recommendation = recommendation_for_score(score.overall)
+    if score.recommendation != expected_recommendation:
+        score = score.model_copy(update={"recommendation": expected_recommendation})
+    return score
