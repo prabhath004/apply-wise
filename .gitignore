@@ -1,0 +1,16 @@
+.DS_Store
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+
+node_modules/
+dist/
+extension/dist/
+coverage/
+
+backend/data/*.db
+backend/data/*.db-*
+!backend/data/.gitkeep

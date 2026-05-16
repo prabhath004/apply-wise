@@ -1,0 +1,13 @@
+{
+  "name": "job-intel-extension",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --dir extension dev",
+    "build": "pnpm --dir extension build",
+    "test": "pnpm --dir extension test && pnpm backend:test",
+    "backend:dev": "cd backend && uvicorn main:app --reload --port 8000",
+    "backend:test": "cd backend && pytest"
+  },
+  "devDependencies": {}
+}
