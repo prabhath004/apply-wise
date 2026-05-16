@@ -70,6 +70,66 @@ function bestDescription(documentRef: Document): string {
   return fromSelectors;
 }
 
+function cleanContactName(value: string): string {
+  return clean(value)
+    .replace(/\s+·\s+\d+(st|nd|rd|th)?$/i, "")
+    .replace(/\s+View profile.*$/i, "")
+    .trim();
+}
+
+function isLikelyName(value: string): boolean {
+  const cleaned = cleanContactName(value);
+  if (!cleaned || cleaned.length > 80 || cleaned.includes("@")) return false;
+  const words = cleaned.split(/\s+/);
+  return words.length >= 2 && words.length <= 5 && words.every((word) => /^[A-Z][A-Za-z'.-]+$/.test(word));
+}
+
+function isRecruitingTitle(value: string): boolean {
+  return /recruit|talent acquisition|sourcer|hiring manager|engineering manager|job poster|people partner/i.test(value);
+}
+
+function profileUrlForName(documentRef: Document, name: string): string | null {
+  const anchors = Array.from(documentRef.querySelectorAll("a[href*='/in/']"));
+  const normalized = name.toLowerCase();
+  for (const anchor of anchors) {
+    const text = clean(anchor.textContent).toLowerCase();
+    if (text.includes(normalized)) {
+      return new URL(anchor.getAttribute("href") ?? "", window.location.origin).toString();
+    }
+  }
+  return null;
+}
+
+function extractVisibleContacts(documentRef: Document): JobInput["page_contacts"] {
+  const lines = Array.from(new Set((documentRef.body?.innerText ?? "").split("\n").map(clean).filter(Boolean)));
+  const contacts: NonNullable<JobInput["page_contacts"]> = [];
+  const seen = new Set<string>();
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!isRecruitingTitle(line)) continue;
+
+    const title = /job poster/i.test(line) ? lines[index - 1] ?? line : line;
+    const nameCandidate = /job poster/i.test(line) ? lines[index - 2] ?? "" : lines[index - 1] ?? "";
+    const name = cleanContactName(nameCandidate);
+    if (!isLikelyName(name) || seen.has(name.toLowerCase())) continue;
+
+    contacts.push({
+      name,
+      title,
+      profile_url: profileUrlForName(documentRef, name),
+      email: null,
+      email_type: null,
+      confidence: 80,
+      confidence_reason: "Visible on the LinkedIn job page as a hiring team or recruiting contact.",
+      sources: [{ title: "LinkedIn job page", url: window.location.href }]
+    });
+    seen.add(name.toLowerCase());
+  }
+
+  return contacts;
+}
+
 export function extractLinkedInJob(documentRef: Document = document): JobInput | null {
   const title = clean(textFromSelectors(TITLE_SELECTORS, documentRef)) || titleFromDocument(documentRef);
   const company = clean(textFromSelectors(COMPANY_SELECTORS, documentRef));
@@ -86,7 +146,8 @@ export function extractLinkedInJob(documentRef: Document = document): JobInput |
     company_name: company,
     location,
     job_url: window.location.href,
-    job_description: description
+    job_description: description,
+    page_contacts: extractVisibleContacts(documentRef)
   };
 }
 

@@ -43,7 +43,7 @@ async def analyze_job(
         local_score=local_score,
     )
     company = await research_company(payload.job.company_name, payload.job.job_url)
-    contacts = await discover_contacts(company)
+    contacts = await discover_contacts(company, payload.job.page_contacts)
 
     repo = AnalysisRepository(db)
     job = repo.create_job(payload.job.model_dump(), parsed_job.model_dump())

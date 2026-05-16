@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.contacts import ContactInfo
+
 
 class JobInput(BaseModel):
     source: str = "manual"
@@ -11,6 +13,7 @@ class JobInput(BaseModel):
     employment_type: str | None = None
     seniority: str | None = None
     posted_date: str | None = None
+    page_contacts: list[ContactInfo] = Field(default_factory=list)
 
     @field_validator("job_title", "company_name", "job_description")
     @classmethod

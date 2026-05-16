@@ -30,7 +30,8 @@ function mergeJob(existing: JobInput, incoming: JobInput): JobInput {
     job_description: incoming.job_description || existing.job_description,
     employment_type: incoming.employment_type || existing.employment_type,
     seniority: incoming.seniority || existing.seniority,
-    posted_date: incoming.posted_date || existing.posted_date
+    posted_date: incoming.posted_date || existing.posted_date,
+    page_contacts: incoming.page_contacts?.length ? incoming.page_contacts : existing.page_contacts
   };
 }
 

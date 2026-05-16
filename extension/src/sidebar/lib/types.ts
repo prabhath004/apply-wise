@@ -15,6 +15,7 @@ export type JobInput = {
   employment_type?: string | null;
   seniority?: string | null;
   posted_date?: string | null;
+  page_contacts?: ContactInfo[];
 };
 
 export type ParsedResumeProfile = {
@@ -64,6 +65,12 @@ export type CompanyInfo = {
   industry?: string | null;
   website?: string | null;
   careers_url?: string | null;
+  public_emails: string[];
+  email_pattern?: string | null;
+  email_domain?: string | null;
+  h1b_data_url?: string | null;
+  h1b_summary?: string | null;
+  recruiter_search_urls: SourceLink[];
   notes: string[];
   sources: SourceLink[];
 };

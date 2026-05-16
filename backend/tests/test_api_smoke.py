@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.schemas.analysis import FitScore
+from app.schemas.company import CompanyInfo
 from main import app
 
 
@@ -8,7 +9,11 @@ def test_resume_upload_and_job_analysis_smoke(monkeypatch) -> None:
     async def fake_score_fit_with_openai(**kwargs) -> FitScore:
         return kwargs["local_score"]
 
+    async def fake_research_company(company_name: str, job_url: str | None = None) -> CompanyInfo:
+        return CompanyInfo(name=company_name, summary="Example company summary.")
+
     monkeypatch.setattr("app.api.routes.analysis.score_fit_with_openai", fake_score_fit_with_openai)
+    monkeypatch.setattr("app.api.routes.analysis.research_company", fake_research_company)
 
     client = TestClient(app)
     resume_response = client.post(

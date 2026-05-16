@@ -26,7 +26,7 @@ export function ContactCard({ contact }: ContactCardProps) {
       {contact.confidence_reason && <p className="mt-2 text-xs text-muted">{contact.confidence_reason}</p>}
       {contact.profile_url && (
         <a className="mt-2 block text-xs text-primary hover:underline" href={contact.profile_url} target="_blank" rel="noreferrer">
-          Public profile
+          {contact.email_type === "search_link" ? "Open search" : "Public profile"}
         </a>
       )}
     </article>

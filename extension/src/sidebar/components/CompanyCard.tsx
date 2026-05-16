@@ -27,6 +27,20 @@ export function CompanyCard({ company }: CompanyCardProps) {
             Careers page
           </a>
         )}
+        {company.h1b_data_url && (
+          <a className="block text-primary hover:underline" href={company.h1b_data_url} target="_blank" rel="noreferrer">
+            H1BData employer search
+          </a>
+        )}
+        {company.h1b_summary && <p>{company.h1b_summary}</p>}
+        {company.public_emails.length > 0 && (
+          <p>Public company emails found: {company.public_emails.slice(0, 3).join(", ")}</p>
+        )}
+        {company.email_pattern && company.email_domain && (
+          <p>
+            Email pattern evidence: {company.email_pattern}@{company.email_domain}
+          </p>
+        )}
         {company.notes.map((note) => (
           <p key={note}>{note}</p>
         ))}

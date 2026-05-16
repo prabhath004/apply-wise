@@ -99,6 +99,66 @@ function extractLinkedInJobInPage(): JobInput | null {
     return selected;
   }
 
+  function cleanContactName(value: string): string {
+    return clean(value)
+      .replace(/\s+·\s+\d+(st|nd|rd|th)?$/i, "")
+      .replace(/\s+View profile.*$/i, "")
+      .trim();
+  }
+
+  function isLikelyName(value: string): boolean {
+    const cleaned = cleanContactName(value);
+    if (!cleaned || cleaned.length > 80 || cleaned.includes("@")) return false;
+    const words = cleaned.split(/\s+/);
+    return words.length >= 2 && words.length <= 5 && words.every((word) => /^[A-Z][A-Za-z'.-]+$/.test(word));
+  }
+
+  function isRecruitingTitle(value: string): boolean {
+    return /recruit|talent acquisition|sourcer|hiring manager|engineering manager|job poster|people partner/i.test(value);
+  }
+
+  function profileUrlForName(name: string): string | null {
+    const anchors = Array.from(document.querySelectorAll("a[href*='/in/']"));
+    const normalized = name.toLowerCase();
+    for (const anchor of anchors) {
+      const text = clean(anchor.textContent).toLowerCase();
+      if (text.includes(normalized)) {
+        return new URL(anchor.getAttribute("href") ?? "", window.location.origin).toString();
+      }
+    }
+    return null;
+  }
+
+  function visibleContacts(): JobInput["page_contacts"] {
+    const lines = Array.from(new Set((document.body?.innerText ?? "").split("\n").map(clean).filter(Boolean)));
+    const contacts: NonNullable<JobInput["page_contacts"]> = [];
+    const seen = new Set<string>();
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      if (!isRecruitingTitle(line)) continue;
+
+      const title = /job poster/i.test(line) ? lines[index - 1] ?? line : line;
+      const nameCandidate = /job poster/i.test(line) ? lines[index - 2] ?? "" : lines[index - 1] ?? "";
+      const name = cleanContactName(nameCandidate);
+      if (!isLikelyName(name) || seen.has(name.toLowerCase())) continue;
+
+      contacts.push({
+        name,
+        title,
+        profile_url: profileUrlForName(name),
+        email: null,
+        email_type: null,
+        confidence: 80,
+        confidence_reason: "Visible on the LinkedIn job page as a hiring team or recruiting contact.",
+        sources: [{ title: "LinkedIn job page", url: window.location.href }]
+      });
+      seen.add(name.toLowerCase());
+    }
+
+    return contacts;
+  }
+
   const title = visibleTextFromSelectors(titleSelectors) || titleFromDocument();
   const company = visibleTextFromSelectors(companySelectors);
   const location = locationFromText(visibleTextFromSelectors(locationSelectors));
@@ -112,7 +172,8 @@ function extractLinkedInJobInPage(): JobInput | null {
     company_name: company,
     location,
     job_url: window.location.href,
-    job_description: description
+    job_description: description,
+    page_contacts: visibleContacts()
   };
 }
 
