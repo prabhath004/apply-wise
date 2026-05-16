@@ -65,6 +65,7 @@ export type CompanyInfo = {
   industry?: string | null;
   website?: string | null;
   careers_url?: string | null;
+  linkedin_url?: string | null;
   public_emails: string[];
   email_pattern?: string | null;
   email_domain?: string | null;

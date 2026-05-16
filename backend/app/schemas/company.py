@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 
 class SourceLink(BaseModel):
@@ -12,6 +12,7 @@ class CompanyInfo(BaseModel):
     industry: str | None = None
     website: str | None = None
     careers_url: str | None = None
+    linkedin_url: str | None = None
     public_emails: list[str] = Field(default_factory=list)
     email_pattern: str | None = None
     email_domain: str | None = None

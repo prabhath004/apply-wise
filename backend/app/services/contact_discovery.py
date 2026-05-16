@@ -176,15 +176,21 @@ def _normalize_page_contact(contact: ContactInfo, company: CompanyInfo) -> Conta
 
 def _search_leads(company: CompanyInfo) -> list[ContactInfo]:
     leads: list[ContactInfo] = []
-    labels = [
-        ("Recruiter search: technical recruiting", "Technical Recruiter / Talent Acquisition"),
-        ("Recruiter search: university recruiting", "University Recruiter / Campus Recruiting"),
-        ("Recruiter search: broader talent acquisition", "Talent Acquisition / Recruiting"),
-    ]
-    for (name, title), source in zip(labels, company.recruiter_search_urls, strict=False):
+    label_by_source_title = {
+        "LinkedIn company recruiter search": ("LinkedIn recruiter search at", "Recruiter / Technical Recruiter"),
+        "LinkedIn company talent search": ("LinkedIn talent search at", "Talent Acquisition / People"),
+        "Public recruiter search 1": ("Recruiter search: technical recruiting at", "Technical Recruiter / Talent Acquisition"),
+        "Public recruiter search 2": ("Recruiter search: university recruiting at", "University Recruiter / Campus Recruiting"),
+        "Public recruiter search 3": ("Recruiter search: broader talent acquisition at", "Talent Acquisition / Recruiting"),
+    }
+    for source in company.recruiter_search_urls:
+        prefix, title = label_by_source_title.get(
+            source.title,
+            ("Recruiter search at", "Recruiting contact"),
+        )
         leads.append(
             ContactInfo(
-                name=f"{name} at {company.name}",
+                name=f"{prefix} {company.name}",
                 title=title,
                 profile_url=source.url,
                 email=None,

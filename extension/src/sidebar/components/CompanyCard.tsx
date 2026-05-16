@@ -27,6 +27,11 @@ export function CompanyCard({ company }: CompanyCardProps) {
             Careers page
           </a>
         )}
+        {company.linkedin_url && (
+          <a className="block text-primary hover:underline" href={company.linkedin_url} target="_blank" rel="noreferrer">
+            LinkedIn company page
+          </a>
+        )}
         {company.h1b_data_url && (
           <a className="block text-primary hover:underline" href={company.h1b_data_url} target="_blank" rel="noreferrer">
             H1BData employer search

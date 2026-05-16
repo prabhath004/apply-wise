@@ -1,6 +1,6 @@
 import asyncio
 import re
-from urllib.parse import quote_plus, urljoin
+from urllib.parse import quote_plus, urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -114,16 +114,45 @@ async def _find_company_homepage(company_name: str, job_url: str | None) -> tupl
     return None
 
 
-def _recruiter_search_urls(company_name: str) -> list[SourceLink]:
+def _normalize_linkedin_company_url(url: str) -> str | None:
+    parsed = urlparse(url)
+    if "linkedin.com" not in parsed.netloc or "/company/" not in parsed.path:
+        return None
+    path = parsed.path.split("?")[0].rstrip("/")
+    return f"https://www.linkedin.com{path}/"
+
+
+def _linkedin_company_url(html_pages: list[str]) -> str | None:
+    for html in html_pages:
+        soup = BeautifulSoup(html, "html.parser")
+        for anchor in soup.find_all("a", href=True):
+            normalized = _normalize_linkedin_company_url(anchor["href"])
+            if normalized:
+                return normalized
+    return None
+
+
+def _recruiter_search_urls(company_name: str, linkedin_url: str | None = None) -> list[SourceLink]:
+    sources: list[SourceLink] = []
+    if linkedin_url:
+        base = linkedin_url.rstrip("/")
+        sources.extend(
+            [
+                SourceLink(title="LinkedIn company recruiter search", url=f"{base}/people/?keywords=recruiter"),
+                SourceLink(title="LinkedIn company talent search", url=f"{base}/people/?keywords=talent%20acquisition"),
+            ]
+        )
+
     queries = [
         f'site:linkedin.com/in "{company_name}" ("technical recruiter" OR "talent acquisition")',
         f'site:linkedin.com/in "{company_name}" ("university recruiter" OR "campus recruiter")',
         f'"{company_name}" "talent acquisition" recruiter',
     ]
-    return [
+    sources.extend(
         SourceLink(title=f"Public recruiter search {index}", url=public_search_url(query))
         for index, query in enumerate(queries, start=1)
-    ]
+    )
+    return sources
 
 
 def _h1b_url(company_name: str) -> str:
@@ -250,10 +279,10 @@ async def _public_email_search(company_name: str, email_domain: str) -> list[str
 async def research_company(company_name: str, job_url: str | None = None) -> CompanyInfo:
     h1b_data_url = _h1b_url(company_name)
     h1b_summary = await _h1b_summary(company_name)
-    recruiter_search_urls = _recruiter_search_urls(company_name)
     homepage = await _find_company_homepage(company_name, job_url)
 
     if not homepage:
+        recruiter_search_urls = _recruiter_search_urls(company_name)
         return CompanyInfo(
             name=company_name,
             summary=None,
@@ -269,6 +298,8 @@ async def research_company(company_name: str, job_url: str | None = None) -> Com
 
     website, home_html = homepage
     extra_sources, texts, html_pages = await _fetch_extra_pages(website, home_html)
+    linkedin_url = _linkedin_company_url(html_pages)
+    recruiter_search_urls = _recruiter_search_urls(company_name, linkedin_url)
     careers_url = next((source.url for source in extra_sources if source.title == "Careers page"), None)
     summary = _meta_summary(home_html) or _summary_from_text(" ".join(texts))
     email_domain = domain_from_url(website)
@@ -281,15 +312,26 @@ async def research_company(company_name: str, job_url: str | None = None) -> Com
     pattern_evidence = dominant_pattern_evidence(emails)
 
     sources = [SourceLink(title="Company website", url=website), *extra_sources, SourceLink(title="H1BData employer search", url=h1b_data_url)]
+    if linkedin_url:
+        sources.insert(1, SourceLink(title="LinkedIn company page", url=linkedin_url))
     notes = ["Recruiter search links are public-search leads; verify identity before outreach."]
     if h1b_summary:
         notes.append(h1b_summary)
+    if not pattern_evidence.pattern:
+        notes.append(
+            "No verified public employee email pattern was found, so recruiter emails are hidden instead of guessed."
+        )
+    elif pattern_evidence.confidence < 60:
+        notes.append(
+            f"Only weak email pattern evidence was found ({pattern_evidence.confidence}% confidence), so inferred recruiter emails are hidden."
+        )
 
     return CompanyInfo(
         name=company_name,
         summary=summary,
         website=website,
         careers_url=careers_url,
+        linkedin_url=linkedin_url,
         public_emails=emails[:10],
         email_pattern=pattern_evidence.pattern,
         email_domain=email_domain,
