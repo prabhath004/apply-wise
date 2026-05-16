@@ -14,6 +14,13 @@ const emptyJob: JobInput = {
 };
 
 function mergeJob(existing: JobInput, incoming: JobInput): JobInput {
+  if (existing.job_url && incoming.job_url && existing.job_url !== incoming.job_url) {
+    return {
+      ...emptyJob,
+      ...incoming
+    };
+  }
+
   return {
     source: incoming.source || existing.source,
     job_title: incoming.job_title || existing.job_title,
@@ -43,6 +50,22 @@ export function useCurrentJob() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof chrome === "undefined" || !chrome.storage?.onChanged) return;
+
+    function handleStorageChange(changes: Record<string, chrome.storage.StorageChange>, areaName: string) {
+      if (areaName !== "local") return;
+      const nextJob = changes["applyintel.currentJob"]?.newValue;
+      if (!nextJob) return;
+      setJob((existing) => mergeJob(existing, nextJob as JobInput));
+      setSyncStatus("success");
+      setSyncError(null);
+    }
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    return () => chrome.storage.onChanged.removeListener(handleStorageChange);
   }, []);
 
   const updateJob = useCallback(async (next: JobInput) => {

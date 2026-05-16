@@ -90,7 +90,7 @@ export function extractLinkedInJob(documentRef: Document = document): JobInput |
   };
 }
 
-async function storeExtractedJob() {
+async function captureJobFromShortcut() {
   const job = extractLinkedInJob();
   if (!job || typeof chrome === "undefined" || !chrome.storage?.local) return;
   await chrome.storage.local.set({ "applyintel.currentJob": job });
@@ -107,15 +107,15 @@ if (typeof chrome !== "undefined" && chrome.storage?.local) {
     return false;
   });
 
-  void storeExtractedJob();
-
-  let lastUrl = window.location.href;
-  const observer = new MutationObserver(() => {
-    if (window.location.href !== lastUrl) {
-      lastUrl = window.location.href;
-      window.setTimeout(() => void storeExtractedJob(), 800);
-    }
-  });
-
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "i") {
+        event.preventDefault();
+        event.stopPropagation();
+        void captureJobFromShortcut();
+      }
+    },
+    true
+  );
 }
