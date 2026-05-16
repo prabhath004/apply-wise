@@ -1,0 +1,5 @@
+{
+  "openai_model": "gpt-4.1-mini",
+  "embedding_model": "text-embedding-3-small",
+  "api_key_preview": "sk-p...WusA"
+}

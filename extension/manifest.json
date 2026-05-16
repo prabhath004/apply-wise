@@ -3,8 +3,8 @@
   "name": "ApplyIntel",
   "description": "Analyze job fit locally, research public company signals, and generate focused outreach.",
   "version": "0.1.0",
-  "permissions": ["storage", "activeTab", "sidePanel", "scripting"],
-  "host_permissions": ["http://localhost:8000/*", "https://www.linkedin.com/jobs/*"],
+  "permissions": ["storage", "activeTab", "sidePanel", "scripting", "tabs"],
+  "host_permissions": ["http://localhost:8000/*", "https://*.linkedin.com/*"],
   "background": {
     "service_worker": "assets/serviceWorker.js",
     "type": "module"
@@ -16,12 +16,5 @@
   "options_page": "options.html",
   "side_panel": {
     "default_path": "sidebar.html"
-  },
-  "content_scripts": [
-    {
-      "matches": ["https://www.linkedin.com/jobs/*"],
-      "js": ["assets/linkedinExtractor.js"],
-      "run_at": "document_idle"
-    }
-  ]
+  }
 }

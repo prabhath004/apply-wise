@@ -11,8 +11,12 @@ type JobSummaryCardProps = {
   syncError: string | null;
 };
 
-function hasSnapshot(job: JobInput): boolean {
+function hasAnySnapshot(job: JobInput): boolean {
   return Boolean(job.job_title || job.company_name || job.job_description);
+}
+
+function hasCompleteSnapshot(job: JobInput): boolean {
+  return Boolean(job.job_title && job.company_name && job.job_description);
 }
 
 function descriptionPreview(value: string): string {
@@ -34,14 +38,20 @@ export function JobSummaryCard({ job, onChange, onSync, syncStatus, syncError }:
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold">Job Snapshot</h2>
-              {hasSnapshot(job) && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+              {hasAnySnapshot(job) && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${
+                    hasCompleteSnapshot(job)
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-amber-200 bg-amber-50 text-amber-700"
+                  }`}
+                >
                   <CheckCircle2 size={12} />
-                  Synced
+                  {hasCompleteSnapshot(job) ? "Synced" : "Partial"}
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-muted">Active job page</p>
+            <p className="mt-1 text-xs text-muted">Press Cmd+I to capture the active job page.</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button
@@ -67,11 +77,11 @@ export function JobSummaryCard({ job, onChange, onSync, syncStatus, syncError }:
         </div>
       </div>
 
-      {!hasSnapshot(job) ? (
+      {!hasAnySnapshot(job) ? (
         <div className="p-4">
           <div className="rounded-lg border border-dashed border-border bg-surface p-4">
             <p className="text-sm font-medium text-ink">No active job captured</p>
-            <p className="mt-1 text-xs leading-5 text-muted">Waiting for a LinkedIn job page.</p>
+            <p className="mt-1 text-xs leading-5 text-muted">Open a LinkedIn job page, then press Cmd+I.</p>
           </div>
         </div>
       ) : (

@@ -1,6 +1,6 @@
 import { AlertTriangle, CheckCircle2, Play, Sparkles } from "lucide-react";
 import { createRoot } from "react-dom/client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import "../styles/globals.css";
 import { CompanyCard } from "./components/CompanyCard";
@@ -25,11 +25,10 @@ function SidebarApp() {
   const { job, setJob, isLoaded, syncFromActiveTab, syncStatus, syncError } = useCurrentJob();
   const analysisState = useAnalysis(settings);
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
-  const attemptedAutoSync = useRef(false);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "i") {
         event.preventDefault();
         void syncFromActiveTab();
       }
@@ -38,12 +37,6 @@ function SidebarApp() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [syncFromActiveTab]);
-
-  useEffect(() => {
-    if (attemptedAutoSync.current || !isLoaded || job.job_title || job.job_description) return;
-    attemptedAutoSync.current = true;
-    void syncFromActiveTab();
-  }, [isLoaded, job.job_title, job.job_description, syncFromActiveTab]);
 
   async function handleSaveSettings() {
     await saveSettings(settings);

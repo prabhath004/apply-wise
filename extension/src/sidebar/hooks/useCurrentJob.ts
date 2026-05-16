@@ -13,6 +13,20 @@ const emptyJob: JobInput = {
   job_description: ""
 };
 
+function mergeJob(existing: JobInput, incoming: JobInput): JobInput {
+  return {
+    source: incoming.source || existing.source,
+    job_title: incoming.job_title || existing.job_title,
+    company_name: incoming.company_name || existing.company_name,
+    location: incoming.location || existing.location,
+    job_url: incoming.job_url || existing.job_url,
+    job_description: incoming.job_description || existing.job_description,
+    employment_type: incoming.employment_type || existing.employment_type,
+    seniority: incoming.seniority || existing.seniority,
+    posted_date: incoming.posted_date || existing.posted_date
+  };
+}
+
 export function useCurrentJob() {
   const [job, setJob] = useState<JobInput>(emptyJob);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -41,15 +55,17 @@ export function useCurrentJob() {
     setSyncError(null);
     try {
       const synced = await syncJobFromActiveTab();
-      setJob(synced);
+      const merged = mergeJob(job, synced);
+      setJob(merged);
+      await saveCurrentJob(merged);
       setSyncStatus("success");
-      return synced;
+      return merged;
     } catch (err) {
       setSyncStatus("error");
       setSyncError(err instanceof Error ? err.message : "Could not sync job details.");
       return null;
     }
-  }, []);
+  }, [job]);
 
   return { job, setJob: updateJob, isLoaded, syncFromActiveTab, syncStatus, syncError };
 }

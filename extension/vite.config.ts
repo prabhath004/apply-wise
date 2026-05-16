@@ -25,12 +25,11 @@ export default defineConfig({
         popup: resolve(rootDir, "popup.html"),
         options: resolve(rootDir, "options.html"),
         sidebar: resolve(rootDir, "sidebar.html"),
-        serviceWorker: resolve(rootDir, "src/background/serviceWorker.ts"),
-        linkedinExtractor: resolve(rootDir, "src/content/linkedinExtractor.ts")
+        serviceWorker: resolve(rootDir, "src/background/serviceWorker.ts")
       },
       output: {
         entryFileNames: (chunk) => {
-          if (chunk.name === "serviceWorker" || chunk.name === "linkedinExtractor") {
+          if (chunk.name === "serviceWorker") {
             return "assets/[name].js";
           }
           return "assets/[name]-[hash].js";

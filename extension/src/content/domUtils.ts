@@ -1,6 +1,11 @@
 export function textFromSelectors(selectors: string[], root: ParentNode = document): string | null {
   for (const selector of selectors) {
-    const node = root.querySelector(selector);
+    const candidates = Array.from(root.querySelectorAll(selector));
+    const node = candidates.find((candidate) => {
+      if (!(candidate instanceof HTMLElement)) return true;
+      const style = window.getComputedStyle(candidate);
+      return style.display !== "none" && style.visibility !== "hidden" && candidate.offsetParent !== null;
+    }) ?? candidates[0];
     const value = node?.textContent?.trim();
     if (value) return value.replace(/\s+/g, " ");
   }
